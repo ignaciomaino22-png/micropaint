@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Specific email restriction for administrative features
+      return isEmailVerified() && request.auth.token.email == 'ignaciomaino22@gmail.com';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isNotBanned(userId) {
+      return !exists(/databases/$(database)/documents/bans/$(userId));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Functions
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'joinedAt'])
+          && data.keys().size() == 3
+          && data.userId is string && data.userId.size() <= 128
+          && data.displayName is string && data.displayName.size() <= 100
+          && data.joinedAt is timestamp;
+    }
+
+    function isValidDrawing(data) {
+      return data.keys().hasAll(['id', 'userId', 'userName', 'pointsText', 'imageUrl', 'clientWidth', 'clientHeight', 'createdAt', 'isDeleted'])
+          && data.keys().size() == 9
+          && data.id is string && data.id.size() <= 128
+          && data.userId is string && data.userId.size() <= 128
+          && data.userName is string && data.userName.size() <= 100
+          && data.pointsText is string && data.pointsText.size() <= 50000
+          && data.imageUrl is string && data.imageUrl.size() <= 500000
+          && data.clientWidth is number
+          && data.clientHeight is number
+          && data.createdAt is timestamp
+          && data.isDeleted is bool;
+    }
+
+    function isValidBan(data) {
+      return data.keys().hasAll(['userId', 'bannedEmail', 'bannedAt', 'bannedBy', 'reason'])
+          && data.keys().size() == 5
+          && data.userId is string && data.userId.size() <= 128
+          && data.bannedEmail is string && data.bannedEmail.size() <= 200
+          && data.bannedAt is timestamp
+          && data.bannedBy is string && data.bannedBy.size() <= 128
+          && data.reason is string && data.reason.size() <= 500;
+    }
+
+    // Collections
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update: if isOwner(userId) && isNotBanned(userId) && isValidUser(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /drawings/{drawingId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+          && isNotBanned(request.auth.uid)
+          && isValidId(drawingId)
+          && incoming().userId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().isDeleted == false
+          && isValidDrawing(incoming());
+
+      allow update: if (isAdmin() && isValidDrawing(incoming())) || (
+          isOwner(existing().userId)
+          && isNotBanned(request.auth.uid)
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && isValidDrawing(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /bans/{userId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(userId) && (request.method == 'delete' || isValidBan(incoming()));
+    }
+  }
+}

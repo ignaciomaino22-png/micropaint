@@ -1,0 +1,6 @@
+{
+  "name": "MicroPaint",
+  "description": "Un juego multijugador en tiempo real donde los jugadores suben imágenes y dibujan perímetros para revelar secciones de ellas en un lienzo compartido. Incluye panel de moderación para administradores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A player in the game",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "isBanned": { "type": "boolean" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName"]
+    },
+    "Drawing": {
+      "title": "Drawing",
+      "description": "A collaborative drawing revealing an image section",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "pointsText": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isDeleted": { "type": "boolean" },
+        "clientWidth": { "type": "number" },
+        "clientHeight": { "type": "number" }
+      },
+      "required": ["id", "userId", "userName", "pointsText", "imageUrl", "clientWidth", "clientHeight"]
+    },
+    "Ban": {
+      "title": "Ban",
+      "description": "Banned user entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bannedEmail": { "type": "string" },
+        "bannedAt": { "type": "string", "format": "date-time" },
+        "bannedBy": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "required": ["userId", "bannedEmail", "bannedAt", "bannedBy"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "drawings/{drawingId}": {
+      "schema": "Drawing",
+      "description": "Shared drawing objects"
+    },
+    "bans/{userId}": {
+      "schema": "Ban",
+      "description": "Active banned user accounts"
+    }
+  }
+}
